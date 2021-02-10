@@ -16,6 +16,7 @@ library(shiny)   # for web applications
 library(rgeos)
 library(maps)
 library(WikidataQueryServiceR)
+library(osmdata)
 
 # To scrape a bit
 library(rvest)
@@ -56,12 +57,27 @@ cities_canada = cities %>%
 # cities_manitoba = st_intersection(cities, st_union(manitoba))
 
 # Do pruning brute force: get list of municipalities in MB and see which ones are in cities_canada
-municipalities_MB = htmltab("https://en.wikipedia.org/wiki/List_of_municipalities_in_Manitoba")
-to_remove = grep("Total", municipalities_MB$Name)
-to_remove = c(to_remove, grep("Province", municipalities_MB$Name))
-municipalities_MB = municipalities_MB[setdiff(1:dim(municipalities_MB)[1], to_remove),]
-MB_in_CAN_data = intersect(cities_canada$name, municipalities_MB$Name)
+# Urban municipalities
+municipalities_urban_MB = htmltab("https://en.wikipedia.org/wiki/List_of_municipalities_in_Manitoba", 1)
+to_remove = grep("Total", municipalities_urban_MB$Name)
+to_remove = c(to_remove, grep("Province", municipalities_urban_MB$Name))
+municipalities_urban_MB = municipalities_urban_MB[setdiff(1:dim(municipalities_urban_MB)[1], to_remove),]
+# Rural municipalities
+municipalities_rural_MB = htmltab("https://en.wikipedia.org/wiki/List_of_municipalities_in_Manitoba", 2)
+to_remove = grep("Total", municipalities_rural_MB$Name)
+to_remove = c(to_remove, grep("Province", municipalities_rural_MB$Name))
+municipalities_rural_MB = municipalities_rural_MB[setdiff(1:dim(municipalities_rural_MB)[1], to_remove),]
+# List of names only
+municipalities_MB = c(municipalities_urban_MB$Name, municipalities_rural_MB$Name)
+
+MB_in_CAN_data = intersect(cities_canada$name, municipalities_MB)
 cities_manitoba = cities_canada[which(cities_canada$name %in% MB_in_CAN_data),]
+
+# Get road networks
+FRA_roads = read_sf("/home/jarino/DATA_local/GEOGRAPHY/road-networks/FRA/road.shp")
+st_crs(FRA_roads) = 2154 # 4326
+st_crs(FRA_roads$geometry) = 2154
+FRA_roads = st_transform(FRA_roads, crs = 4326)
 
 #france = st_transform(france, crs = 2192)
 #manitoba = st_transform(manitoba, crs = 3348)
@@ -71,20 +87,24 @@ w1 = tm_shape(france) +
     tm_fill() +
     tm_style("bw") +
     tm_layout(frame = FALSE) +
+  # tm_shape(FRA_roads$geometry) +
+  #   tm_lines(lwd = 2) +
   tm_shape(cities_france) +
-    tm_symbols(size = "pop", scale = 1) 
+    tm_symbols(size = "pop", scale = 1) +
+  tm_compass(position = c("right", "bottom")) +
+  tm_scale_bar(position = c("right", "bottom"))
 # Add fill layer to Manitoba shape
-w2 = tm_shape(manitoba) +
+w2 = tm_shape(manitoba) + 
     tm_fill() +
     tm_style("bw") +
     tm_layout(frame = FALSE) +
   tm_shape(cities_manitoba) +
-    tm_symbols(size = "pop", scale = 1)
+    tm_symbols(size = "pop", scale = 1) +
+  tm_scale_bar()
 
-#current.mode <- tmap_mode("plot")
-#tmap_mode("view")
+# tmap_mode("plot")
+# tmap_mode("view")
 tmap_arrange(w1, w2)
-#tmap_mode(current.mode)
 
 # r <- query_wikidata('
 #     SELECT ?item ?itemLabel (MIN(?_date) AS ?date) (MIN(?_year) AS ?year) {
