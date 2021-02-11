@@ -37,7 +37,7 @@ manitoba <- ne_states(country = "Canada", returnclass = "sf") %>%
 
 # Use world.cities from the maps package
 # Keep only cities with at least 10K inhabitants
-cities <- world.cities[world.cities$pop >= 5000, ]
+cities <- world.cities[world.cities$pop >= 3000, ]
 # turn it into an sf object
 cities <- cities %>%
   st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
@@ -73,11 +73,17 @@ municipalities_MB = c(municipalities_urban_MB$Name, municipalities_rural_MB$Name
 MB_in_CAN_data = intersect(cities_canada$name, municipalities_MB)
 cities_manitoba = cities_canada[which(cities_canada$name %in% MB_in_CAN_data),]
 
-# Get road networks
-FRA_roads = read_sf("/home/jarino/DATA_local/GEOGRAPHY/road-networks/FRA/road.shp")
-st_crs(FRA_roads) = 2154 # 4326
-st_crs(FRA_roads$geometry) = 2154
+# Get road networks. France first
+FRA_roads = read_sf("/home/jarino/DATA/GEOGRAPHY/road-networks/FRA/road.shp")
+#st_crs(FRA_roads) = 2154 # 4326
+#st_crs(FRA_roads$geometry) = 2154
 FRA_roads = st_transform(FRA_roads, crs = 4326)
+# Manitoba
+MB_roads = read_sf("/home/jarino/DATA/GEOGRAPHY/road-networks/MB/trn_lrs_highway_network_2018_shp/LRS_HIGHWAY_NETWORK_2018.shp")
+MB_roads = st_transform(MB_roads)
+# Keep only Provincial Trunk Highways and Provincial Roads
+idx = grep("H", MB_roads$ROAD_TYPE)
+MB_roads = MB_roads[idx,]
 
 #france = st_transform(france, crs = 2192)
 #manitoba = st_transform(manitoba, crs = 3348)
@@ -87,24 +93,29 @@ w1 = tm_shape(france) +
     tm_fill() +
     tm_style("bw") +
     tm_layout(frame = FALSE) +
-  # tm_shape(FRA_roads$geometry) +
-  #   tm_lines(lwd = 2) +
+  tm_shape(FRA_roads$geometry) +
+     tm_lines(lwd = 0.2) +
   tm_shape(cities_france) +
-    tm_symbols(size = "pop", scale = 1) +
-  tm_compass(position = c("right", "bottom")) +
-  tm_scale_bar(position = c("right", "bottom"))
+    tm_symbols(size = "pop", scale = 1.5, title.size = "Population") +
+  tm_compass(position = c("right", "top")) +
+  tm_scale_bar(position = c("right", "top"))
 # Add fill layer to Manitoba shape
 w2 = tm_shape(manitoba) + 
     tm_fill() +
     tm_style("bw") +
     tm_layout(frame = FALSE) +
+  tm_shape(MB_roads$geometry) +
+    tm_lines(lwd = 0.2) +
   tm_shape(cities_manitoba) +
-    tm_symbols(size = "pop", scale = 1) +
-  tm_scale_bar()
+    tm_symbols(size = "pop", scale = 1.5, title.size = "Population") +
+  tm_compass(position = c("right", "top")) +
+  tm_scale_bar(position = c("right", "top"))
 
 # tmap_mode("plot")
 # tmap_mode("view")
+pdf(file = "FRA_and_MB_to_scale.pdf", width = 10, height = 8)
 tmap_arrange(w1, w2)
+dev.off()
 
 # r <- query_wikidata('
 #     SELECT ?item ?itemLabel (MIN(?_date) AS ?date) (MIN(?_year) AS ?year) {
