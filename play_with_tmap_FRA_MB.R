@@ -84,6 +84,16 @@ MB_roads = st_transform(MB_roads)
 # Keep only Provincial Trunk Highways and Provincial Roads
 idx = grep("H", MB_roads$ROAD_TYPE)
 MB_roads = MB_roads[idx,]
+idx = which(!is.na(MB_roads$NATIONAL_H))
+MB_roads = MB_roads[idx,]
+
+# Read MB lakes
+MB_water = read_sf("/home/jarino/DATA/GEOGRAPHY/rivers-lakes/MB/500k_hyd-py.shp")
+#st_crs(MB_water) = 4326
+#MB_water = st_transform(MB_water)
+
+tm_shape(MB_water) +
+  tm_fill()
 
 #france = st_transform(france, crs = 2192)
 #manitoba = st_transform(manitoba, crs = 3348)
@@ -96,26 +106,30 @@ w1 = tm_shape(france) +
   tm_shape(FRA_roads$geometry) +
      tm_lines(lwd = 0.2) +
   tm_shape(cities_france) +
-    tm_symbols(size = "pop", scale = 1.5, title.size = "Population") +
-  tm_compass(position = c("right", "top")) +
-  tm_scale_bar(position = c("right", "top"))
+    tm_symbols(size = "pop", scale = 1.25, title.size = "Population") +
+  #tm_compass(position = c("right", "top")) +
+  tm_scale_bar(position = c("right", "top")) +
+  tm_graticules(lwd = 0.5)
 # Add fill layer to Manitoba shape
 w2 = tm_shape(manitoba) + 
     tm_fill() +
     tm_style("bw") +
     tm_layout(frame = FALSE) +
+  tm_shape(MB_water) +
+    tm_fill(col = "dodgerblue4") +
   tm_shape(MB_roads$geometry) +
     tm_lines(lwd = 0.2) +
   tm_shape(cities_manitoba) +
-    tm_symbols(size = "pop", scale = 1.5, title.size = "Population") +
-  tm_compass(position = c("right", "top")) +
-  tm_scale_bar(position = c("right", "top"))
+    tm_symbols(size = "pop", scale = 1.25, title.size = "Population") +
+  #tm_compass(position = c("right", "top")) +
+  tm_scale_bar(position = c("right", "top")) +
+  tm_graticules(lwd = 0.5)
 
 # tmap_mode("plot")
 # tmap_mode("view")
-pdf(file = "FRA_and_MB_to_scale.pdf", width = 10, height = 8)
 tmap_arrange(w1, w2)
-dev.off()
+p = tmap_arrange(w1, w2)
+tmap_save(p, filename = "FRA_and_MB_to_scale.png", width = 1920, height = 1000)
 
 # r <- query_wikidata('
 #     SELECT ?item ?itemLabel (MIN(?_date) AS ?date) (MIN(?_year) AS ?year) {
