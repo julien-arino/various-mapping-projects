@@ -87,8 +87,8 @@ municipalities_MB = read.csv("/home/jarino/DATA/GEOGRAPHY/Canada/canadacities.cs
   st_cast("POINT")
 
 # Do fly in communities in MB
-fly_in_MB = read.csv("/home/jarino/DATA/GEOGRAPHY/Canada/canadacities.csv") %>%
-  filter(province_id == "MB")
+fly_in_MB = read.csv("/home/jarino/DATA/GEOGRAPHY/Canada/cgn_mb_csv_eng.csv") %>%
+  filter(Generic.Term == "Indian Reserve")
 
 # # Get population in French cities
 # municipalities_20kplus_FRA = rbind(htmltab("https://en.wikipedia.org/wiki/List_of_communes_in_France_with_over_20,000_inhabitants", 1),
