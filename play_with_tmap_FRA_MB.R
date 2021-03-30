@@ -1,6 +1,7 @@
 library(sf)
 library(raster)
 library(dplyr)
+library(readr)
 library(spData)
 library(spDataLarge)
 library(rnaturalearth)
@@ -56,28 +57,71 @@ cities_canada = cities %>%
 #   st_cast("POINT")
 # cities_manitoba = st_intersection(cities, st_union(manitoba))
 
-# Do pruning brute force: get list of municipalities in MB and see which ones are in cities_canada
-# Urban municipalities
-municipalities_urban_MB = htmltab("https://en.wikipedia.org/wiki/List_of_municipalities_in_Manitoba", 1)
-to_remove = grep("Total", municipalities_urban_MB$Name)
-to_remove = c(to_remove, grep("Province", municipalities_urban_MB$Name))
-municipalities_urban_MB = municipalities_urban_MB[setdiff(1:dim(municipalities_urban_MB)[1], to_remove),]
-# Rural municipalities
-municipalities_rural_MB = htmltab("https://en.wikipedia.org/wiki/List_of_municipalities_in_Manitoba", 2)
-to_remove = grep("Total", municipalities_rural_MB$Name)
-to_remove = c(to_remove, grep("Province", municipalities_rural_MB$Name))
-municipalities_rural_MB = municipalities_rural_MB[setdiff(1:dim(municipalities_rural_MB)[1], to_remove),]
-# List of names only
-municipalities_MB = c(municipalities_urban_MB$Name, municipalities_rural_MB$Name)
+# # Do pruning brute force: get list of municipalities in MB and see which ones are in cities_canada
+# # Urban municipalities
+# municipalities_urban_MB = htmltab("https://en.wikipedia.org/wiki/List_of_municipalities_in_Manitoba", 1)
+# to_remove = grep("Total", municipalities_urban_MB$Name)
+# to_remove = c(to_remove, grep("Province", municipalities_urban_MB$Name))
+# municipalities_urban_MB = municipalities_urban_MB[setdiff(1:dim(municipalities_urban_MB)[1], to_remove),]
+# colnames(municipalities_urban_MB)[4] = "pop_2016"
+# # Rural municipalities
+# municipalities_rural_MB = htmltab("https://en.wikipedia.org/wiki/List_of_municipalities_in_Manitoba", 2)
+# to_remove = grep("Total", municipalities_rural_MB$Name)
+# to_remove = c(to_remove, grep("Province", municipalities_rural_MB$Name))
+# municipalities_rural_MB = municipalities_rural_MB[setdiff(1:dim(municipalities_rural_MB)[1], to_remove),]
+# colnames(municipalities_rural_MB)[3] = "pop_2016"
+# # List of names only
+# municipalities_MB = rbind(municipalities_urban_MB[,c("Name", "pop_2016")], 
+#                           municipalities_rural_MB[,c("Name", "pop_2016")])
+# # Simplify populations
+# municipalities_MB = municipalities_MB %>%
+#   mutate(pop_2016 = as.numeric(gsub(",", "", municipalities_MB$pop_2016))) %>%
+#   arrange(desc(pop_2016)) %>% 
+#   filter(pop_2016 >= 4000) 
 
-MB_in_CAN_data = intersect(cities_canada$name, municipalities_MB)
-cities_manitoba = cities_canada[which(cities_canada$name %in% MB_in_CAN_data),]
+# Use a nice little file I found..
+municipalities_MB = read.csv("/home/jarino/DATA/GEOGRAPHY/Canada/canadacities.csv") %>%
+  filter(province_id == "MB") %>%
+  filter(population >= 4000) %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) %>%
+  st_cast("POINT")
+
+# Do fly in communities in MB
+fly_in_MB = read.csv("/home/jarino/DATA/GEOGRAPHY/Canada/canadacities.csv") %>%
+  filter(province_id == "MB")
+
+# # Get population in French cities
+# municipalities_20kplus_FRA = rbind(htmltab("https://en.wikipedia.org/wiki/List_of_communes_in_France_with_over_20,000_inhabitants", 1),
+#                                    htmltab("https://en.wikipedia.org/wiki/List_of_communes_in_France_with_over_20,000_inhabitants", 2))
+# Get localisation of cities in FRA
+list_cities_FRA = read_csv("/home/jarino/DATA/GEOGRAPHY/France/villes_france.csv", col_names = FALSE)
+list_cities_FRA_cols = read.csv("/home/jarino/DATA/GEOGRAPHY/France/list_cities_FRA_col_names.txt", header = FALSE)
+col_names =  c("id", list_cities_FRA_cols[1:12,1], "no_se", list_cities_FRA_cols[13:dim(list_cities_FRA_cols)[1],1])
+colnames(list_cities_FRA) = col_names
+# # Add department numbers
+# list_departments_FRA = htmltab("https://fr.wikipedia.org/wiki/Liste_des_d%C3%A9partements_fran%C3%A7ais_class%C3%A9s_par_population_et_superficie", 1)
+# list_departments_FRA = htmltab("https://en.wikipedia.org/wiki/List_of_French_departments_by_population", 1) %>%
+#   filter(`INSEE Dept. No.` <900) %>%
+#   arrange(`INSEE Dept. No.`)
+# list_cities_FRA = merge(x = list_departments_FRA, y = list_cities_FRA, by.x = "INSEE Dept. No.", by.y = "departement")
+# # Merge info
+# list_cities_FRA_tmp = merge(x = list_cities_FRA, y = municipalities_20kplus_FRA, 
+#                         by.x = "nom_reel", by.y = "Commune") %>%
+#   filter(Department.x == Department.y) %>%
+#   select(nom_reel, "Population, 2017", lon_deg, lat_deg) %>%
+#   mutate(`Population, 2017` = gsub(",", "", list_cities_FRA$`Population, 2017`))
+list_cities_FRA = list_cities_FRA %>%
+  filter(pop_2012 >= 4000) %>%
+  st_as_sf(coords = c("lon_deg", "lat_deg"), crs = 4326) %>%
+  st_cast("POINT")
 
 # Get road networks. France first
 FRA_roads = read_sf("/home/jarino/DATA/GEOGRAPHY/road-networks/FRA/road.shp")
 #st_crs(FRA_roads) = 2154 # 4326
 #st_crs(FRA_roads$geometry) = 2154
 FRA_roads = st_transform(FRA_roads, crs = 4326)
+
+
 # Manitoba
 MB_roads = read_sf("/home/jarino/DATA/GEOGRAPHY/road-networks/MB/trn_lrs_highway_network_2018_shp/LRS_HIGHWAY_NETWORK_2018.shp")
 MB_roads = st_transform(MB_roads)
@@ -86,30 +130,43 @@ idx = grep("H", MB_roads$ROAD_TYPE)
 MB_roads = MB_roads[idx,]
 idx = which(!is.na(MB_roads$NATIONAL_H))
 MB_roads = MB_roads[idx,]
-
 # Read MB lakes
-MB_water = read_sf("/home/jarino/DATA/GEOGRAPHY/rivers-lakes/MB/500k_hyd-py.shp")
-#st_crs(MB_water) = 4326
+MB_water = read_sf("/home/jarino/DATA/GEOGRAPHY/rivers-lakes/MB/500k_shp/500k_hyd-py.shp")
+#st_crs(MB_water) = "EPSG:4326"
 #MB_water = st_transform(MB_water)
 
-tm_shape(MB_water) +
-  tm_fill()
+#st_bbox(MB_water) = c(xmin = -110, ymin = 48.95, xmax = -100, ymax = 60.5)
+bbox_MB = st_bbox(c(xmin = -102.1, xmax = -89, ymin = 48.95, ymax = 60.5), crs = st_crs(4326))
+bbox_FRA = st_bbox(c(xmin = -5, xmax = 10, ymin = 41, ymin = 52), crs = st_crs(4326))
+
+# france = st_transform(france, 
+#                     crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=2 +lat_0=47")
+# FRA_roads = st_transform(FRA_roads, 
+#                          crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=2 +lat_0=47")
+# manitoba = st_transform(manitoba, 
+#                         crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=-98 +lat_0=54")
+# MB_roads = st_transform(MB_roads, 
+#                         crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=-98 +lat_0=54")
+# cities_manitoba = st_transform(cities_manitoba, 
+#                                crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=-98 +lat_0=54")
+#tm_shape(MB_water) +
+#  tm_fill()
 
 #france = st_transform(france, crs = 2192)
 #manitoba = st_transform(manitoba, crs = 3348)
 
 # Add fill layer to france shape
-w1 = tm_shape(france) +
+w1 = tm_shape(france, asp = 1) +
     tm_fill() +
     tm_style("bw") +
     tm_layout(frame = FALSE) +
   tm_shape(FRA_roads$geometry) +
      tm_lines(lwd = 0.2) +
-  tm_shape(cities_france) +
-    tm_symbols(size = "pop", scale = 1.25, title.size = "Population") +
-  #tm_compass(position = c("right", "top")) +
+  tm_shape(list_cities_FRA) +
+    tm_symbols(size = "pop_2012", scale = 1.25, title.size = "Population") +
   tm_scale_bar(position = c("right", "top")) +
-  tm_graticules(lwd = 0.5)
+  tm_graticules(lwd = 0.5) +
+  tm_layout(title = "FRA")
 # Add fill layer to Manitoba shape
 w2 = tm_shape(manitoba) + 
     tm_fill() +
@@ -119,17 +176,26 @@ w2 = tm_shape(manitoba) +
     tm_fill(col = "dodgerblue4") +
   tm_shape(MB_roads$geometry) +
     tm_lines(lwd = 0.2) +
-  tm_shape(cities_manitoba) +
-    tm_symbols(size = "pop", scale = 1.25, title.size = "Population") +
-  #tm_compass(position = c("right", "top")) +
+  tm_shape(municipalities_MB) +
+    tm_symbols(size = "population", scale = 1.25, title.size = "Population") +
   tm_scale_bar(position = c("right", "top")) +
-  tm_graticules(lwd = 0.5)
+  tm_graticules(lwd = 0.5) +
+  tm_layout(title = "CAN-MB") +
+  tm_grid(x = seq(-5, 10, by = 2), y = seq(42, 50, by = 2))
 
-# tmap_mode("plot")
-# tmap_mode("view")
-tmap_arrange(w1, w2)
-p = tmap_arrange(w1, w2)
-tmap_save(p, filename = "FRA_and_MB_to_scale.png", width = 1920, height = 1000)
+
+#print(w1, return.asp = TRUE, mode = "plot")
+#print(w2, return.asp = TRUE, mode = "plot")
+
+p = tmap_arrange(w1, w2)#, 
+                 #widths = c(0.45, 0.55), heights = c(0.4, 0.6))
+
+tmap_save(p, filename = "FRA_and_MB_to_scale.png", 
+          #height = 4)
+          width = 2000, height = 1200)
+
+tmap_save(w1, filename = "cities_roads_FRA.png", asp = 1)
+tmap_save(w2, filename = "cities_roads_CAN-MB.png", asp = 1)
 
 # r <- query_wikidata('
 #     SELECT ?item ?itemLabel (MIN(?_date) AS ?date) (MIN(?_year) AS ?year) {
