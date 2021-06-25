@@ -79,16 +79,40 @@ cities_canada = cities %>%
 #   arrange(desc(pop_2016)) %>% 
 #   filter(pop_2016 >= 4000) 
 
+# MB in detail
+# Manitoba
+MB_roads = read_sf("/home/jarino/DATA/GEOGRAPHY/road-networks/MB/trn_lrs_highway_network_2018_shp/LRS_HIGHWAY_NETWORK_2018.shp")
+MB_roads = st_transform(MB_roads)
+# For large roads, keep only Provincial Trunk Highways and Provincial Roads
+idx = grep("H", MB_roads$ROAD_TYPE)
+MB_large_roads = MB_roads[idx,]
+idx = which(!is.na(MB_large_roads$NATIONAL_H))
+MB_large_roads = MB_large_roads[idx,]
+# Read MB lakes
+MB_water = read_sf("/home/jarino/DATA/GEOGRAPHY/rivers-lakes/MB/500k_shp/500k_hyd-py.shp")
+st_crs(MB_water) = st_crs(MB_roads)
+MB_water = st_transform(MB_water)
+
 # Use a nice little file I found..
 municipalities_MB = read.csv("/home/jarino/DATA/GEOGRAPHY/Canada/canadacities.csv") %>%
   filter(province_id == "MB") %>%
-  filter(population >= 4000) %>%
   st_as_sf(coords = c("lng", "lat"), crs = 4326) %>%
   st_cast("POINT")
 
+municipalities_MB_large = municipalities_MB %>%
+  filter(population >= 4000) 
+
 # Do fly in communities in MB
 fly_in_MB = read.csv("/home/jarino/DATA/GEOGRAPHY/Canada/cgn_mb_csv_eng.csv") %>%
-  filter(Generic.Term == "Indian Reserve")
+  filter(Generic.Category == "Populated Place") %>%
+  filter(Generic.Term == "Northern Community" | Generic.Term == "Town" | 
+           Geographical.Name == "Tadoule Lake" | Geographical.Name == "Lac Brochet") %>%
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
+  st_cast("POINT")
+
+# Tadoule Lake: 58.706111, -98.512222
+# Lac Brochet: 58.62, -101.483889
+
 
 # # Get population in French cities
 # municipalities_20kplus_FRA = rbind(htmltab("https://en.wikipedia.org/wiki/List_of_communes_in_France_with_over_20,000_inhabitants", 1),
@@ -122,19 +146,6 @@ FRA_roads = read_sf("/home/jarino/DATA/GEOGRAPHY/road-networks/FRA/road.shp")
 FRA_roads = st_transform(FRA_roads, crs = 4326)
 
 
-# Manitoba
-MB_roads = read_sf("/home/jarino/DATA/GEOGRAPHY/road-networks/MB/trn_lrs_highway_network_2018_shp/LRS_HIGHWAY_NETWORK_2018.shp")
-MB_roads = st_transform(MB_roads)
-# Keep only Provincial Trunk Highways and Provincial Roads
-idx = grep("H", MB_roads$ROAD_TYPE)
-MB_roads = MB_roads[idx,]
-idx = which(!is.na(MB_roads$NATIONAL_H))
-MB_roads = MB_roads[idx,]
-# Read MB lakes
-MB_water = read_sf("/home/jarino/DATA/GEOGRAPHY/rivers-lakes/MB/500k_shp/500k_hyd-py.shp")
-#st_crs(MB_water) = "EPSG:4326"
-#MB_water = st_transform(MB_water)
-
 #st_bbox(MB_water) = c(xmin = -110, ymin = 48.95, xmax = -100, ymax = 60.5)
 bbox_MB = st_bbox(c(xmin = -102.1, xmax = -89, ymin = 48.95, ymax = 60.5), crs = st_crs(4326))
 bbox_FRA = st_bbox(c(xmin = -5, xmax = 10, ymin = 41, ymin = 52), crs = st_crs(4326))
@@ -152,9 +163,6 @@ bbox_FRA = st_bbox(c(xmin = -5, xmax = 10, ymin = 41, ymin = 52), crs = st_crs(4
 #tm_shape(MB_water) +
 #  tm_fill()
 
-#france = st_transform(france, crs = 2192)
-#manitoba = st_transform(manitoba, crs = 3348)
-
 # Add fill layer to france shape
 w1 = tm_shape(france, asp = 1) +
     tm_fill() +
@@ -163,7 +171,9 @@ w1 = tm_shape(france, asp = 1) +
   tm_shape(FRA_roads$geometry) +
      tm_lines(lwd = 0.2) +
   tm_shape(list_cities_FRA) +
-    tm_symbols(size = "pop_2012", scale = 1.25, title.size = "Population") +
+    tm_symbols(size = "pop_2012", 
+               scale = 1.25, 
+               title.size = "Population") +
   tm_scale_bar(position = c("right", "top")) +
   tm_graticules(lwd = 0.5) +
   tm_layout(title = "FRA")
@@ -173,16 +183,18 @@ w2 = tm_shape(manitoba) +
     tm_style("bw") +
     tm_layout(frame = FALSE) +
   tm_shape(MB_water) +
-    tm_fill(col = "dodgerblue4") +
+  tm_fill("white") +
   tm_shape(MB_roads$geometry) +
-    tm_lines(lwd = 0.2) +
-  tm_shape(municipalities_MB) +
-    tm_symbols(size = "population", scale = 1.25, title.size = "Population") +
+  tm_lines(lwd = 0.1) +
+  tm_shape(MB_large_roads$geometry) +
+  tm_lines(lwd = 0.5) +
+  tm_shape(municipalities_MB_large) +
+  tm_symbols(size = "population", 
+             title.size = "Population", 
+             scale = 1.25) +
   tm_scale_bar(position = c("right", "top")) +
   tm_graticules(lwd = 0.5) +
-  tm_layout(title = "CAN-MB") +
-  tm_grid(x = seq(-5, 10, by = 2), y = seq(42, 50, by = 2))
-
+  tm_layout(title = "CAN-MB")
 
 #print(w1, return.asp = TRUE, mode = "plot")
 #print(w2, return.asp = TRUE, mode = "plot")
@@ -193,9 +205,40 @@ p = tmap_arrange(w1, w2)#,
 tmap_save(p, filename = "FRA_and_MB_to_scale.png", 
           #height = 4)
           width = 2000, height = 1200)
+crop_figure("FRA_and_MB_to_scale.png")
 
 tmap_save(w1, filename = "cities_roads_FRA.png", asp = 1)
-tmap_save(w2, filename = "cities_roads_CAN-MB.png", asp = 1)
+crop_figure("cities_roads_FRA.png")
+
+
+
+
+
+# Add fill layer to Manitoba shape
+w3 = tm_shape(manitoba) + 
+  tm_fill() +
+  tm_layout(frame = FALSE) +
+  tm_shape(MB_water) +
+  tm_fill("white") +
+  #tm_shape(MB_water) +
+  #tm_fill("dodgerblue4", alpha = 0.25) +
+  tm_shape(MB_roads$geometry) +
+  tm_lines(lwd = 0.3) +
+  tm_shape(MB_large_roads$geometry) +
+  tm_lines(lwd = 1) +
+  tm_shape(fly_in_MB) +
+  tm_symbols(col = "dodgerblue4", border.col = "dodgerblue4", scale = 0.3) +
+  tm_shape(municipalities_MB_large) +
+  tm_symbols(scale = 0.5, 
+             col = "red3", border.col = "red3") +
+  tm_legend(show = FALSE) +
+  tm_scale_bar(position = c("right", "top")) +
+  tm_graticules(lwd = 0.5) +
+  tm_layout(title = "CAN-MB") +
+  tm_grid(x = seq(-5, 10, by = 2), y = seq(42, 50, by = 2))
+  
+tmap_save(w3, filename = "cities_roads_CAN-MB_detail.png", asp = 1)
+crop_figure("cities_roads_CAN-MB_detail.png")
 
 # r <- query_wikidata('
 #     SELECT ?item ?itemLabel (MIN(?_date) AS ?date) (MIN(?_year) AS ?year) {
