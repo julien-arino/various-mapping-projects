@@ -455,25 +455,6 @@ png(file = "pct_activations_days.png",
 #      width = 8, height = 6, res = 300, units = "in",
 #      compression = "zip")
 par(mar = c(7, 7, 7, 7))
-plot(ymd(DATA$CAN$distinct_activations$date), DATA$CAN$distinct_activations$cum_activations_pct,
-     type = "l",
-     lwd = 5,
-     col = "darkorange4",
-     ylim = c(0, 100),
-     cex.lab = 2, cex.axis = 2,
-     xaxt = "n",
-     xlab = "Date", 
-     ylab = sprintf("Jurisdictions becoming active (%% of total activations)", look_back))
-lines(ymd(DATA$MEX$distinct_activations$date), DATA$MEX$distinct_activations$cum_activations_pct,
-      type = "l",
-      lwd = 5,
-      pch = 17,
-      col = "dodgerblue4")
-lines(ymd(DATA$USA$distinct_activations$date), DATA$USA$distinct_activations$cum_activations_pct,
-      type = "l",
-      lwd = 5,
-      pch = 17,
-      col = "black")
 for (h in c(0, 100)) {
   abline(h = h, lty = 1, lwd = 1)
 }
@@ -492,3 +473,62 @@ axis(1,
      cex.axis = 2)
 dev.off()
 crop_figure("pct_activations_days.png")
+
+# pdf(file = sprintf("%s/pct_active_3weeks_PT_HR.pdf", DIRS$FIGS),
+#     width =8, height = 6)
+png(file = sprintf("pct_active_%ddays_with_pct_activations.png", look_back),
+    width = 1200, height = 800)
+# tiff(file = sprintf("%s/pct_active_3weeks_PT_HR.tif", DIRS$FIGS),
+#      width = 8, height = 6, res = 300, units = "in",
+#      compression = "zip")
+par(mar = c(7, 7, 7, 7))
+plot(DATA$CAN$dates_local_activity[idx_CAN], DATA$CAN$pct_local_units_with_cases_period[idx_CAN],
+     type = "l",
+     lwd = 5,
+     col = "darkorange4",
+     ylim = c(0, 100),
+     cex.lab = 2, cex.axis = 2,
+     xaxt = "n",
+     xlab = "Date", 
+     ylab = sprintf("Jurisdictions with new cases in past %d days (%%)", look_back))
+lines(DATA$MEX$dates_local_activity[idx_MEX], DATA$MEX$pct_local_units_with_cases_period[idx_MEX],
+      type = "l",
+      lwd = 5,
+      pch = 17,
+      col = "dodgerblue4")
+lines(DATA$USA$dates_local_activity[idx_USA], DATA$USA$pct_local_units_with_cases_period[idx_USA],
+      type = "l",
+      lwd = 5,
+      pch = 17,
+      col = "black")
+lines(ymd(DATA$CAN$distinct_activations$date), DATA$CAN$distinct_activations$cum_activations_pct,
+     type = "l",
+     lwd = 5, lty = 3,
+     col = "darkorange4")
+lines(ymd(DATA$MEX$distinct_activations$date), DATA$MEX$distinct_activations$cum_activations_pct,
+      type = "l",
+      lwd = 5, lty = 3,
+      col = "dodgerblue4")
+lines(ymd(DATA$USA$distinct_activations$date), DATA$USA$distinct_activations$cum_activations_pct,
+      type = "l",
+      lwd = 5, lty = 3,
+      col = "black")
+for (h in c(0, 100)) {
+  abline(h = h, lty = 1, lwd = 1)
+}
+for (h in seq(from = 10, to = 90, by = 10)) {
+  abline(h = h, lty = 3, lwd = 0.5)
+}
+legend("bottomright", 
+       legend = c("CAN", "MEX", "USA"),
+       col = c("darkorange4", "dodgerblue4", "black"), bg = "white",
+       lwd = c(5, 5, 5),
+       cex = 2,
+       inset = 0.01)
+axis(1, 
+     at = pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN])),
+     labels = sprintf("%s", pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN]))),
+     cex.axis = 2)
+dev.off()
+crop_figure(sprintf("pct_active_%ddays.png", look_back))
+
