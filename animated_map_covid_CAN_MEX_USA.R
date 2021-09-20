@@ -18,8 +18,8 @@ source("functions_useful.R")
 # Enable caching in tigris
 options(tigris_use_cache = TRUE)
 
-REFRESH_DATA = TRUE
-PROCESS_DATA = TRUE
+REFRESH_DATA = FALSE
+PROCESS_DATA = FALSE
 PLOT_MAPS = FALSE
 ZOOM_PLOT_TIMESERIES = FALSE
 
@@ -492,7 +492,7 @@ for (h in seq(from = 10, to = 90, by = 10)) {
   abline(h = h, lty = 3, lwd = 0.5)
 }
 legend("bottomright", 
-       legend = c("CAN", "MEX", "USA"),
+       legend = c("CAN (122)", "MEX (2,454)", "USA (3,243)"),
        col = c("darkorange4", "dodgerblue4", "black"), bg = "white",
        lwd = c(5, 5, 5),
        cex = 2,
