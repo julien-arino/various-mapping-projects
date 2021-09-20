@@ -18,7 +18,7 @@ source("functions_useful.R")
 # Enable caching in tigris
 options(tigris_use_cache = TRUE)
 
-REFRESH_DATA = FALSE
+REFRESH_DATA = TRUE
 PROCESS_DATA = TRUE
 PLOT_MAPS = FALSE
 ZOOM_PLOT_TIMESERIES = FALSE
@@ -460,7 +460,7 @@ plot(DATA$CAN$dates_local_activity[idx_CAN], DATA$CAN$pct_local_units_with_cases
      col = "darkorange4",
      ylim = c(0, 100),
      cex.lab = 2, cex.axis = 2,
-     xaxt = "n",
+     xaxt = "n", xaxs = "i",
      xlab = "Date", 
      ylab = sprintf("Jurisdictions with new cases in past %d days (%%)", look_back))
 lines(DATA$MEX$dates_local_activity[idx_MEX], DATA$MEX$pct_local_units_with_cases_period[idx_MEX],
