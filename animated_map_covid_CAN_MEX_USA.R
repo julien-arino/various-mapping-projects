@@ -9,6 +9,7 @@ library(tigris)
 library(ggplot2)
 # library(USAboundaries)
 # library(USAboundariesData)
+#devtools::install_github("UrbanInstitute/urbnmapr")
 library(urbnmapr)
 library(tidycensus)
 
@@ -17,9 +18,10 @@ source("functions_useful.R")
 # Enable caching in tigris
 options(tigris_use_cache = TRUE)
 
-REFRESH_DATA = TRUE
+REFRESH_DATA = FALSE
 PROCESS_DATA = TRUE
 PLOT_MAPS = FALSE
+ZOOM_PLOT_TIMESERIES = TRUE
 
 date_today = today()
 #date_today = "2021-06-27"
@@ -206,31 +208,31 @@ if (PROCESS_DATA) {
   DATA$USA$idx_dates_local = grep("202", colnames(DATA$USA$local))
   DATA$USA$dates_local = colnames(DATA_RAW$USA$local)[DATA$USA$idx_dates_local]
   DATA$USA$date_range_local = range(ymd(DATA$USA$dates_local))
-  ###
-  ### GLOBAL (minus USA)
-  ###
-  DATA$global = list()
-  DATA$global$idx_dates = grep("202", colnames(DATA_RAW$global))
-  DATA$global$dates = colnames(DATA_RAW$global)[DATA$global$idx_dates]
-  DATA$global$date_range = range(ymd(DATA$global$dates))
-  DATA$global$data = mat.or.vec(nr = length(unique(tmp$Country.Region)),
-                                nc = length(DATA$global$dates))
-  for (i in 1:length(unique(tmp$Country.Region))) {
-    CT = unique(tmp$Country.Region)[i]
-    tmp_table = DATA_RAW$global[which(tmp$Country.Region == CT), DATA$global$idx_dates]
-    DATA$global$data[i,] = colSums(tmp_table)
-  }
-  colnames(DATA$global$data) = DATA$global$dates
-  rownames(DATA$global$data) = unique(tmp$Country.Region)
-  # Find active C/T through time
-  DATA$global$active_CT = DATA$global$data
-  DATA$global$active_CT[which(DATA$global$active_CT>0)] = 1
-  DATA$global$nb_active_CT = colSums(DATA$global$active_CT)
-  # Look for times when a C/T decreased, by computing diffs
-  DATA$global$active_CT_delta = DATA$global$active_CT[,2:dim(DATA$global$active_CT)[2]]
-  for (i in 1:dim(DATA$global$active_CT)[1]) {
-    DATA$global$active_CT_delta[i,] = diff(DATA$global$active_CT[i,])
-  }
+  # ###
+  # ### GLOBAL (minus USA)
+  # ###
+  # DATA$global = list()
+  # DATA$global$idx_dates = grep("202", colnames(DATA_RAW$global))
+  # DATA$global$dates = colnames(DATA_RAW$global)[DATA$global$idx_dates]
+  # DATA$global$date_range = range(ymd(DATA$global$dates))
+  # DATA$global$data = mat.or.vec(nr = length(unique(tmp$Country.Region)),
+  #                               nc = length(DATA$global$dates))
+  # for (i in 1:length(unique(tmp$Country.Region))) {
+  #   CT = unique(tmp$Country.Region)[i]
+  #   tmp_table = DATA_RAW$global[which(tmp$Country.Region == CT), DATA$global$idx_dates]
+  #   DATA$global$data[i,] = colSums(tmp_table)
+  # }
+  # colnames(DATA$global$data) = DATA$global$dates
+  # rownames(DATA$global$data) = unique(tmp$Country.Region)
+  # # Find active C/T through time
+  # DATA$global$active_CT = DATA$global$data
+  # DATA$global$active_CT[which(DATA$global$active_CT>0)] = 1
+  # DATA$global$nb_active_CT = colSums(DATA$global$active_CT)
+  # # Look for times when a C/T decreased, by computing diffs
+  # DATA$global$active_CT_delta = DATA$global$active_CT[,2:dim(DATA$global$active_CT)[2]]
+  # for (i in 1:dim(DATA$global$active_CT)[1]) {
+  #   DATA$global$active_CT_delta[i,] = diff(DATA$global$active_CT[i,])
+  # }
   ###
   ### Determine periods without new cases
   ###
@@ -323,6 +325,18 @@ if (PLOT_MAPS) {
 ###
 ###
 
+if (ZOOM_PLOT_TIMESERIES) {
+  final_date = ymd("2020-08-01")
+  idx_CAN = which(DATA$CAN$dates_local_activity <= final_date)
+  idx_MEX = which(DATA$MEX$dates_local_activity <= final_date)
+  idx_USA = which(DATA$USA$dates_local_activity <= final_date)
+} else {
+  # Put the final date far enough to not have to change each time.. or put today
+  final_date = ymd("2023-01-01")
+  idx_CAN = which(DATA$CAN$dates_local_activity <= final_date)
+  idx_MEX = which(DATA$MEX$dates_local_activity <= final_date)
+  idx_USA = which(DATA$USA$dates_local_activity <= final_date)
+}
 
 # pdf(file = sprintf("%s/pct_active_3weeks_PT_HR.pdf", DIRS$FIGS),
 #     width =8, height = 6)
@@ -332,7 +346,7 @@ png(file = sprintf("pct_active_%ddays.png", look_back),
 #      width = 8, height = 6, res = 300, units = "in",
 #      compression = "zip")
 par(mar = c(7, 7, 7, 7))
-plot(DATA$CAN$dates_local_activity, DATA$CAN$pct_local_units_with_cases_period,
+plot(DATA$CAN$dates_local_activity[idx_CAN], DATA$CAN$pct_local_units_with_cases_period[idx_CAN],
      type = "l",
      lwd = 5,
      col = "darkorange4",
@@ -341,12 +355,12 @@ plot(DATA$CAN$dates_local_activity, DATA$CAN$pct_local_units_with_cases_period,
      xaxt = "n",
      xlab = "Date", 
      ylab = sprintf("Jurisdictions with new cases in past %d days (%%)", look_back))
-lines(DATA$MEX$dates_local_activity, DATA$MEX$pct_local_units_with_cases_period,
+lines(DATA$MEX$dates_local_activity[idx_MEX], DATA$MEX$pct_local_units_with_cases_period[idx_MEX],
       type = "l",
       lwd = 5,
       pch = 17,
       col = "dodgerblue4")
-lines(DATA$USA$dates_local_activity, DATA$USA$pct_local_units_with_cases_period,
+lines(DATA$USA$dates_local_activity[idx_USA], DATA$USA$pct_local_units_with_cases_period[idx_USA],
       type = "l",
       lwd = 5,
       pch = 17,
@@ -364,9 +378,117 @@ legend("bottomright",
        cex = 2,
        inset = 0.01)
 axis(1, 
-     at = pretty(ymd(DATA$CAN$dates_local_activity)),
-     labels = sprintf("%s", pretty(ymd(DATA$CAN$dates_local_activity))),
+     at = pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN])),
+     labels = sprintf("%s", pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN]))),
      cex.axis = 2)
 dev.off()
 crop_figure(sprintf("pct_active_%ddays.png", look_back))
 
+# Find date of first reported case (CAN)
+DATA$CAN$date_first_case = DATA$CAN$local[,c("province", "health_region")]
+date_first_case = c()
+for (i in 1:dim(DATA$CAN$local)[1]) {
+  tmp = DATA$CAN$local[i, 3:dim(DATA$CAN$local)[2]]
+  idx_nonzero = which(as.numeric(tmp) > 0)
+  if (length(idx_nonzero)>0) {
+    date_first_case = c(date_first_case,
+                        names(tmp)[idx_nonzero[1]])
+  } else {
+    date_first_case = c(date_first_case, NA)
+  }
+}
+DATA$CAN$date_first_case$date_first_case = date_first_case
+
+# Find date of first reported case (MEX)
+DATA$MEX$date_first_case = DATA$MEX$local[,c("cve_ent", "nombre")]
+date_first_case = c()
+for (i in 1:dim(DATA$MEX$local)[1]) {
+  tmp = DATA$MEX$local[i, 4:dim(DATA$MEX$local)[2]]
+  idx_nonzero = which(as.numeric(tmp) > 0)
+  if (length(idx_nonzero)>0) {
+    date_first_case = c(date_first_case,
+                        names(tmp)[idx_nonzero[1]])
+  } else {
+    date_first_case = c(date_first_case, NA)
+  }
+}
+DATA$MEX$date_first_case$date_first_case = date_first_case
+
+# Find date of first reported case (USA)
+DATA$USA$date_first_case = DATA$USA$local[,c("FIPS", "Combined_Key")]
+date_first_case = c()
+for (i in 1:dim(DATA$USA$local)[1]) {
+  tmp = DATA$USA$local[i, 12:dim(DATA$USA$local)[2]]
+  idx_nonzero = which(as.numeric(tmp) > 0)
+  if (length(idx_nonzero)>0) {
+    date_first_case = c(date_first_case,
+                        names(tmp)[idx_nonzero[1]])
+  } else {
+    date_first_case = c(date_first_case, NA)
+  }
+}
+DATA$USA$date_first_case$date_first_case = date_first_case
+
+for (place in c("CAN", "MEX", "USA")) {
+  tmp_date_range = sort(DATA[[place]]$date_first_case$date_first_case)
+  tmp_dates = seq(ymd(tmp_date_range[1]), ymd(tmp_date_range[length(tmp_date_range)]), by = "day")
+  nb_activations_day = c()
+  for (d in as.character(tmp_dates)) {
+    activate_on_day_d = which(DATA[[place]]$date_first_case$date_first_case == d)
+    nb_activations_day = c(nb_activations_day, length(activate_on_day_d))
+  }
+  DATA[[place]]$distinct_activations = data.frame(
+    date = as.character(tmp_dates),
+    nb_activations_day = nb_activations_day
+  )
+  DATA[[place]]$distinct_activations$cum_activations = cumsum(DATA[[place]]$distinct_activations$nb_activations_day)
+  DATA[[place]]$distinct_activations$cum_activations_pct = 
+    DATA[[place]]$distinct_activations$cum_activations / sum(DATA[[place]]$distinct_activations$nb_activations_day) * 100
+}
+
+
+# pdf(file = sprintf("%s/pct_active_3weeks_PT_HR.pdf", DIRS$FIGS),
+#     width =8, height = 6)
+png(file = "pct_activations_days.png",
+    width = 1200, height = 800)
+# tiff(file = sprintf("%s/pct_active_3weeks_PT_HR.tif", DIRS$FIGS),
+#      width = 8, height = 6, res = 300, units = "in",
+#      compression = "zip")
+par(mar = c(7, 7, 7, 7))
+plot(ymd(DATA$CAN$distinct_activations$date), DATA$CAN$distinct_activations$cum_activations_pct,
+     type = "l",
+     lwd = 5,
+     col = "darkorange4",
+     ylim = c(0, 100),
+     cex.lab = 2, cex.axis = 2,
+     xaxt = "n",
+     xlab = "Date", 
+     ylab = sprintf("Jurisdictions becoming active (%% of total activations)", look_back))
+lines(ymd(DATA$MEX$distinct_activations$date), DATA$MEX$distinct_activations$cum_activations_pct,
+      type = "l",
+      lwd = 5,
+      pch = 17,
+      col = "dodgerblue4")
+lines(ymd(DATA$USA$distinct_activations$date), DATA$USA$distinct_activations$cum_activations_pct,
+      type = "l",
+      lwd = 5,
+      pch = 17,
+      col = "black")
+for (h in c(0, 100)) {
+  abline(h = h, lty = 1, lwd = 1)
+}
+for (h in seq(from = 10, to = 90, by = 10)) {
+  abline(h = h, lty = 3, lwd = 0.5)
+}
+legend("bottomright", 
+       legend = c("CAN", "MEX", "USA"),
+       col = c("darkorange4", "dodgerblue4", "black"), bg = "white",
+       lwd = c(5, 5, 5),
+       cex = 2,
+       inset = 0.01)
+axis(1, 
+     at = pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN])),
+     labels = sprintf("%s", pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN]))),
+     cex.axis = 2)
+dev.off()
+crop_figure("pct_activations_days.png")
