@@ -446,34 +446,6 @@ for (place in c("CAN", "MEX", "USA")) {
     DATA[[place]]$distinct_activations$cum_activations / sum(DATA[[place]]$distinct_activations$nb_activations_day) * 100
 }
 
-
-# pdf(file = sprintf("%s/pct_active_3weeks_PT_HR.pdf", DIRS$FIGS),
-#     width =8, height = 6)
-png(file = "pct_activations_days.png",
-    width = 1200, height = 800)
-# tiff(file = sprintf("%s/pct_active_3weeks_PT_HR.tif", DIRS$FIGS),
-#      width = 8, height = 6, res = 300, units = "in",
-#      compression = "zip")
-par(mar = c(7, 7, 7, 7))
-for (h in c(0, 100)) {
-  abline(h = h, lty = 1, lwd = 1)
-}
-for (h in seq(from = 10, to = 90, by = 10)) {
-  abline(h = h, lty = 3, lwd = 0.5)
-}
-legend("bottomright", 
-       legend = c("CAN", "MEX", "USA"),
-       col = c("darkorange4", "dodgerblue4", "black"), bg = "white",
-       lwd = c(5, 5, 5),
-       cex = 2,
-       inset = 0.01)
-axis(1, 
-     at = pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN])),
-     labels = sprintf("%s", pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN]))),
-     cex.axis = 2)
-dev.off()
-crop_figure("pct_activations_days.png")
-
 # pdf(file = sprintf("%s/pct_active_3weeks_PT_HR.pdf", DIRS$FIGS),
 #     width =8, height = 6)
 png(file = sprintf("pct_active_%ddays_with_pct_activations.png", look_back),
@@ -530,5 +502,5 @@ axis(1,
      labels = sprintf("%s", pretty(ymd(DATA$CAN$dates_local_activity[idx_CAN]))),
      cex.axis = 2)
 dev.off()
-crop_figure(sprintf("pct_active_%ddays.png", look_back))
+crop_figure(sprintf("pct_active_%ddays_with_pct_activations.png", look_back))
 
