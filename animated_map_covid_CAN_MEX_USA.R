@@ -21,7 +21,7 @@ options(tigris_use_cache = TRUE)
 REFRESH_DATA = FALSE
 PROCESS_DATA = TRUE
 PLOT_MAPS = FALSE
-ZOOM_PLOT_TIMESERIES = TRUE
+ZOOM_PLOT_TIMESERIES = FALSE
 
 date_today = today()
 #date_today = "2021-06-27"
