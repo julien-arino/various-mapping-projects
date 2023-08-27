@@ -3,7 +3,7 @@ library(raster)
 library(dplyr)
 library(readr)
 library(spData)
-library(spDataLarge)
+#library(spDataLarge)
 library(rnaturalearth)
 #devtools::install_github("ropensci/rnaturalearthhires")
 library(rnaturalearthhires)
@@ -29,7 +29,11 @@ data(World, metro, rivers, land)
 
 # Get metropolitan France from {rnaturalearth}
 france <- ne_states(country = "France", returnclass = "sf") %>% 
-  filter(!name %in% c("Guyane française", "Martinique", "Guadeloupe", "La Réunion", "Mayotte"))
+  filter(!name %in% c("Guyane française", 
+                      "Martinique", 
+                      "Guadeloupe", 
+                      "La Réunion", 
+                      "Mayotte"))
 # Get Canada
 canada <- ne_states(country = "Canada", returnclass = "sf")
 # Get Manitoba

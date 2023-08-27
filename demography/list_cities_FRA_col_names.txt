@@ -1,0 +1,25 @@
+departement,"numéro du département"
+slug,"identifiant unique en minuscule, sans accent et sans espace. Peut servir pour faire les URLs d’un site web"
+nom,"nom en majuscule et sans accent"
+nom_simple,"nom en minuscule, sans accent et avec les tirets remplacés par des espaces. Peut être utilisé pour faire une recherche lorsqu'on ne sait pas si le nom de ville possède un tiret ou des espaces (ex : “Saint-Étienne” possède un tiret comme séparateur, tandis que 'Le Havre' possède un espace comme séparateur)"
+nom_reel,"nom correct avec les accents"
+nom_soundex,"soundex du nom de la ville (permet de trouver des villes qui se prononcent presque pareil) [ajouté le 31/10/2013]"
+nom_metaphone,"metaphone du nom de la ville (même utilité que le soundex) [ajouté le 31/10/2013]"
+code_postal,"code postal de la ville. Si la ville possède plusieurs code postaux, ils sont tous listés et séparés par un tiret [ajouté le 31/10/2013]"
+numero_commune,"numéro de la commune dans le département. Combiné avec le numéro de département, il permet de créer le code INSEE sous 5 caractères."
+code_commune,"(ou code INSEE) identifiant unique sous 5 caractères"
+arrondissement,"arrondissement de la ville"
+canton,"canton de la ville"
+pop_2010,"nombre d’habitants lors du recensement de 2010"
+pop_1999,"nombre d’habitants lors du recensement de 1999"
+pop_2012,"(approximatif) : valeur exprimée en centaine"
+densite_2010,"nombre d’habitants au kilomètre carré arrondie à l’entier. Calculé à partir du nombre d’habitant et de la surface de la ville [corrigé le 02/07/2014]"
+superficie,"surface de la ville en kilomètre carrée [corrigé le 02/07/2014]"
+lon_deg,"géolocalisation du centre de la ville. Permet de localiser la ville sur une carte (exemple : carte Google Maps) [ajouté le 31/10/2013, corrigé le 07/11/2013]"
+lat_deg,
+lon_GRD,"géolocalisation exprimée en GRD"
+lat_GRD,
+lon_DMS,"(Degré Minute Seconde) géolocalisation exprimée en Degré Minute Seconde"
+lat_DMS,
+alt_min,"hauteur minimum et maximum de la ville par rapport au niveau de l’eau"
+alt_max,
