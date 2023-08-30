@@ -1,42 +1,61 @@
-# Get data on France and Manitoba and plot road networks and cities in both, as
-# well as (the numerous) lakes in Manitoba
+# Get data on a Canadian P/T and plot road networks and cities. If available, 
+# also get water bodies (lakes, etc.)
+# Road networks come from
+#   https://open.canada.ca/data/en/dataset/3d282116-e556-400c-9306-ca1a3cada77f
 
 library(dplyr)
 library(sf)
-library(tmap)    # for static and interactive maps
+library(tmap)
 
 source("functions_useful.R")
 
-# Get metropolitan France from {rnaturalearth}
-france <- rnaturalearth::ne_states(country = "France", returnclass = "sf") %>% 
-  filter(!name %in% c("Guyane française", 
-                      "Martinique", 
-                      "Guadeloupe", 
-                      "La Réunion", 
-                      "Mayotte"))
+# Are we using shapefiles or geopackage files for road networks? Set following to
+# SHAPE or GEOPACKAGE (this is grep-ed)
+NRN_file_type = "GEOPACKAGE"
+# Set the P/T under consideration
+PT = "Manitoba"
 
-# Get Manitoba
-manitoba <- rnaturalearth::ne_states(country = "Canada", returnclass = "sf") %>%
-  filter(name == "Manitoba")
+# Get the list of available files from 
+#   https://open.canada.ca/data/en/dataset/3d282116-e556-400c-9306-ca1a3cada77f
+# Get the information from a JSON file there
+raw_data <- RCurl::getURL("https://open.canada.ca/data/api/action/package_show?id=3d282116-e556-400c-9306-ca1a3cada77f")
+tmp = rjson::fromJSON(raw_data)$result$resources
+spatial_data = list()
+for (i in 1:length(tmp)) {
+  spatial_data[[i]] = list()
+  spatial_data[[i]]$name = tmp[[i]]$name
+  spatial_data[[i]]$url = tmp[[i]]$url
+}
+spatial_data = plyr::ldply(spatial_data, data.frame)
+# Keep only the links (and names) to road networks, and select type (SHAPE or 
+# GEOPACKAGE) of file used
+spatial_data = spatial_data %>%
+  filter(grepl("NRN", spatial_data$name)) 
+spatial_data = spatial_data %>%
+  filter(grepl(NRN_file_type, spatial_data$name))
+# Get NRN for the selected geography
+geography_NRN = spatial_data %>%
+  filter(grepl(PT, spatial_data$name))
+geography_NRN = read_shape_URL(geography_NRN$url, type = NRN_file_type)
+
+# Get map of the P/T
+geography <- rnaturalearth::ne_states(country = "Canada", returnclass = "sf") %>%
+  filter(name == PT)
 
 # Use world.cities from the maps package
-# Keep only cities with at least 10K inhabitants
+# Keep only cities with at least 3K inhabitants
 cities <- maps::world.cities[maps::world.cities$pop >= 3000, ]
 # turn it into an sf object
 cities <- cities %>%
   sf::st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
   sf::st_cast("POINT")
-# keep only the cities that are in France
-cities_france = cities %>%
-  filter(country.etc == "France")
 # keep only the cities that are in Canada
 cities_canada = cities %>%
   filter(country.etc == "Canada")
 
-# MB in detail
-# Manitoba
+# Geography in detail
 # Get data on roads from 
-#   https://geo.statcan.gc.ca/nrn_rrn/mb/nrn_rrn_mb_SHAPE.zip
+#   https://open.canada.ca/data/en/dataset/3d282116-e556-400c-9306-ca1a3cada77f
 MB_roads = sf::read_sf("geography/shape-files/trn_lrs_highway_network_2018_shp/LRS_HIGHWAY_NETWORK_2018.shp")
 MB_roads = sf::st_transform(MB_roads)
 # For large roads, keep only Provincial Trunk Highways and Provincial Roads
@@ -56,7 +75,7 @@ municipalities_MB = read.csv("demography/cities-CAN.csv") %>%
   sf::st_cast("POINT")
 
 municipalities_MB_large = municipalities_MB %>%
-  filter(population >= 4000) 
+  filter(population >= 3000) 
 
 # Do fly in communities in MB
 fly_in_MB = read.csv("geography/cgn_mb_csv_eng.csv") %>%
@@ -107,8 +126,8 @@ w1 = tm_shape(france, asp = 1) +
   tm_scale_bar(position = c("right", "top")) +
   tm_graticules(lwd = 0.5) +
   tm_layout(title = "FRA")
-# Add fill layer to Manitoba shape
-w2 = tm_shape(manitoba) + 
+# Add fill layer to geography shape
+w2 = tm_shape(geography) + 
     tm_fill() +
     tm_style("bw") +
     tm_layout(frame = FALSE) +
@@ -137,8 +156,8 @@ crop_figure("cities_roads_FRA.png")
 
 
 
-# Add fill layer to Manitoba shape
-w3 = tm_shape(manitoba) + 
+# Add fill layer to geography shape
+w3 = tm_shape(geography) + 
   tm_fill() +
   tm_layout(frame = FALSE) +
   tm_shape(MB_water) +

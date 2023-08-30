@@ -1,3 +1,23 @@
+# Read a shapefile/geopackage file directly from the web, unzip and load
+# Adapted from
+#   https://stackoverflow.com/questions/64850643/why-cant-i-get-st-read-to-open-a-shapefile-from-a-compressed-file-map-is-read
+# to take into account two potential file types and the language selection in 
+# Canadian federal data
+read_shape_URL <- function(URL, 
+                           type = "GEOPACKAGE",
+                           lang = "en"){
+  cur_tempfile <- tempfile()
+  download.file(url = URL, destfile = cur_tempfile)
+  out_directory <- tempfile()
+  unzip(cur_tempfile, exdir = out_directory)
+  if (type == "GEOPACKAGE") {
+    file = list.files(path = out_directory)
+    file = file[grepl(paste0("_", lang), file)]
+    OUT = sf::st_read(paste0(out_directory,"/",file)) #read_sf also works here
+  }
+  return(OUT)
+}
+
 # MAKE_Y_AXIS
 # Formats the y axis ticks and labels so that they are easier to read.
 # Also returns a multiplicative factor for the plot so that the plot is on the right scale.
