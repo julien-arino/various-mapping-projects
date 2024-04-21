@@ -1,46 +1,69 @@
-library(sf)
-library(raster)
-library(dplyr)
-library(readr)
-library(spData)
-#library(spDataLarge)
-library(rnaturalearth)
-#devtools::install_github("ropensci/rnaturalearthhires")
-library(rnaturalearthhires)
+# Libraries that are "easy" to install from CRAN.
+# Under Linux, this may require to install debs. Watch the output
+# of the install process...
+# The list could use some cleaning...
+required_CRAN_libraries = c(
+  "sf",
+  "raster",
+  "dplyr",
+  "readr",
+  "spData",
+  "rnaturalearth",
+  "tmap",    # for static and interactive maps
+  "leaflet", # for interactive maps
+  "mapview",  # for interactive maps
+  "ggplot2", # tidyverse vis package
+  # "shiny",   # for web applications
+  #"rgeos", # rgeos is now deprecated
+  "maps",
+  "WikidataQueryServiceR",
+  "osmdata"
+)
+
+for (lib in required_CRAN_libraries) {
+  if (!require(lib, character.only = TRUE)) {
+    install.packages(lib, Ncpus = (parallel::detectCores()-1))
+    library(lib, character.only = TRUE)
+  }
+}
+
+# Libraries that come from elsewhere
+# if (!require(spDataLarge)) {
+#   install.packages('spDataLarge', 
+#                    repos='https://nowosad.github.io/drat/', 
+#                    type='source')
+#   library(spDataLarge)
+# }
+if (!require(rnaturalearthhires)) {
+  devtools::install_github("ropensci/rnaturalearthhires")
+  library(rnaturalearthhires)
+}
 
 
-library(tmap)    # for static and interactive maps
-library(leaflet) # for interactive maps
-library(mapview) # for interactive maps
-library(ggplot2) # tidyverse vis package
-library(shiny)   # for web applications
-library(rgeos)
-library(maps)
-library(WikidataQueryServiceR)
-library(osmdata)
 
 # To scrape a bit
 library(rvest)
-#devtools::install_url('https://cran.r-project.org/src/contrib/Archive/htmltab/htmltab_0.7.1.tar.gz')
-library(htmltab)
+if (!require(htmltab)) {
+  devtools::install_url('https://cran.r-project.org/src/contrib/Archive/htmltab/htmltab_0.7.1.tar.gz')
+  library(htmltab)
+}
 
 # Load some general data
 data(World, metro, rivers, land)
 
-# Get metropolitan France from {rnaturalearth}
-france <- ne_states(country = "France", returnclass = "sf") %>% 
-  filter(!name %in% c("Guyane française", 
-                      "Martinique", 
-                      "Guadeloupe", 
-                      "La Réunion", 
-                      "Mayotte"))
+# Get countries from {rnaturalearth}
+cameroon <- ne_states(country = "Cameroon", returnclass = "sf")
+chad <- ne_states(country = "Chad", returnclass = "sf")
+niger <- ne_states(country = "Niger", returnclass = "sf")
+nigeria <- ne_states(country = "Nigeria", returnclass = "sf")
+
 # Get Canada
 canada <- ne_states(country = "Canada", returnclass = "sf")
 # Get Manitoba
 manitoba <- ne_states(country = "Canada", returnclass = "sf") %>%
   filter(name == "Manitoba")
 
-Use world.cities from the maps package
+# Use world.cities from the maps package
 # Keep only cities with at least 10K inhabitants
 cities <- world.cities[world.cities$pop >= 3000, ]
 # turn it into an sf object
